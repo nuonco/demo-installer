@@ -13,6 +13,26 @@ import { GroupContent } from "./GroupContent";
 import { InstallStatusContent } from "./InstallStatusContent";
 import { ErrorAlert } from "./ErrorAlert";
 
+const getFinalStepActiveClassName = (status: string | null) => {
+  // default is the "orange"/in-progress colors
+  const defaultClassName =
+    "border-4 border-step-active-border-color dark:border-step-active-border-color";
+  // success is the "green"/complete colors
+  let successClassName =
+    "border-4 border-step-complete-border-color dark:border-step-complete-border-color";
+  // error is the "red" color. there is no themeable color for this state.
+  let errorClassName = "border-4 border-red-800 dark:border-red-800";
+
+  if (status === "active") {
+    return successClassName;
+  } else if (status === "error") {
+    return errorClassName;
+  } else if (status === "") {
+    return defaultClassName;
+  }
+  return defaultClassName;
+};
+
 const InstallStepper = ({
   app,
   existingInstall,
@@ -23,16 +43,6 @@ const InstallStepper = ({
   getInstall,
   redeployInstall,
 }) => {
-  const [activeStep, setActiveStep] = React.useState(
-    existingInstall ? app.input_config.input_groups.length + 2 : 0,
-  );
-  const [isLastStep, setIsLastStep] = React.useState(false);
-  const [isFirstStep, setIsFirstStep] = React.useState(false);
-
-  const handleNext = () => !isLastStep && setActiveStep((cur) => cur + 1);
-  const handlePrev = () => !isFirstStep && setActiveStep((cur) => cur - 1);
-  const router = useRouter();
-
   // track state of install
   const [install, setInstall] = React.useState(
     existingInstall
@@ -42,8 +52,24 @@ const InstallStepper = ({
           status: "not created",
           status_description: "install has not been created yet",
           install_components: [],
+          install_inputs: [],
         },
   );
+
+  // TODO: break this out into a testable function
+  const _install_inputs = install.install_inputs[0] || [{ values: {} }];
+  const install_input_values = _install_inputs.values;
+  const input_groups = app.input_config.input_groups || [];
+
+  const [activeStep, setActiveStep] = React.useState(
+    existingInstall ? input_groups.length + 2 : 0,
+  );
+  const [isLastStep, setIsLastStep] = React.useState(false);
+  const [isFirstStep, setIsFirstStep] = React.useState(false);
+
+  const handleNext = () => !isLastStep && setActiveStep((cur) => cur + 1);
+  const handlePrev = () => !isFirstStep && setActiveStep((cur) => cur - 1);
+  const router = useRouter();
 
   const [error, setError] = React.useState({
     description: "",
@@ -54,6 +80,11 @@ const InstallStepper = ({
   // create or update install when form is submitted
   const formAction = async (event) => {
     event.preventDefault();
+
+    if (event.key == "Enter") {
+      // this should have been caught by onKeyUp but we include it here also
+      handleNext();
+    }
 
     const formData = new FormData(event.target);
     let installID = "";
@@ -131,17 +162,13 @@ const InstallStepper = ({
     }
   }, 1000 * 10);
 
-  // TODO: break this out into a testable function
-  const _install_inputs = install.install_inputs || [{ values: {} }];
-  const install_input_values = _install_inputs[0].values;
-  const input_groups = app.input_config.input_groups || [];
   const stepContent = input_groups.map((group, idx) => (
     <GroupContent
       key={idx}
       group={group}
       install_input_values={install_input_values}
       idx={idx}
-      setActiveStep={() => setActiveStep(idx + 2)}
+      setActiveStep={() => setActiveStep(idx + 1)}
       activeStep={activeStep}
     />
   ));
@@ -152,9 +179,9 @@ const InstallStepper = ({
       activeClassName="border-4 border-step-active-border-color dark:border-step-active-border-color"
       completedClassName="border-4 border-step-complete-border-color dark:border-step-complete-border-color"
       key={idx}
-      onClick={() => setActiveStep(idx + 2)}
+      onClick={() => setActiveStep(idx + 1)}
     >
-      {idx + 3}
+      {idx + 2}
       <div className="absolute -bottom-[2rem] w-max text-center">
         <Typography variant="h6" className="text-black dark:text-gray-100">
           {group.display_name}
@@ -170,6 +197,7 @@ const InstallStepper = ({
     );
   }
 
+  let finalStepActiveClassName = getFinalStepActiveClassName(install?.status);
   return (
     <div className="relative w-full p-4">
       <Stepper
@@ -193,13 +221,15 @@ const InstallStepper = ({
           </div>
         </Step>
 
+        {...steps}
+
         <Step
           className="border-4 border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
           activeClassName="border-4 border-step-active-border-color dark:border-step-active-border-color"
           completedClassName="border-4 border-step-complete-border-color dark:border-step-complete-border-color"
-          onClick={() => setActiveStep(1)}
+          onClick={() => setActiveStep(steps.length + 1)}
         >
-          2
+          {steps.length + 2}
           <div className="absolute -bottom-[2rem] w-max text-center">
             <Typography variant="h6" className="text-black dark:text-gray-100">
               AWS IAM Role
@@ -207,16 +237,15 @@ const InstallStepper = ({
           </div>
         </Step>
 
-        {...steps}
-
+        {/* this step needs to be in the complete state if the installation is complete. as a result, the activeClassName
+            is determined dynamically. */}
         <Step
           className="border-4 border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
-          activeClassName="border-4 border-step-active-border-color dark:border-step-active-border-color"
+          activeClassName={finalStepActiveClassName}
           completedClassName="border-4 border-step-complete-border-color dark:border-step-complete-border-color"
           onClick={() => setActiveStep(steps.length + 2)}
         >
           {steps.length + 3}
-
           <div className="absolute -bottom-[2rem] w-max text-center">
             <Typography variant="h6" className="text-black dark:text-gray-100">
               Install Status
@@ -225,24 +254,33 @@ const InstallStepper = ({
         </Step>
       </Stepper>
 
-      <form className="mt-10" onSubmit={formAction}>
+      <form
+        className="mt-10"
+        onSubmit={formAction}
+        onKeyUp={(e) => {
+          e.preventDefault();
+          if (e.key == "Enter") {
+            handleNext();
+          }
+        }}
+      >
         <CompanyContent
           name={install.name}
           open={activeStep === 0}
           onClick={() => setActiveStep(0)}
         />
 
+        {...stepContent}
+
         <CloudAccountContent
           app={app}
           aws_account={install.aws_account}
           azure_account={install.aws_account}
-          open={activeStep == 1}
-          onClick={() => setActiveStep(1)}
+          open={activeStep == steps.length + 1}
+          onClick={() => setActiveStep(steps.length + 1)}
           searchParams={searchParams}
           regions={regions}
         />
-
-        {...stepContent}
 
         <InstallStatusContent
           open={activeStep === steps.length + 2}

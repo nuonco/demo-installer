@@ -19,13 +19,13 @@ export default async function Installer({ params, searchParams }) {
   return (
     <>
       <header className="flex flex-col gap-4">
-        <div className="flex justify-between items-center pt-4">
+        <div className="flex justify-between items-center pt-4 pb-4">
           <Link className="w-fit" href="/">
             {"< Other installation options"}
           </Link>
           <Link href={installer?.metadata?.homepage_url}>
             <img
-              className="inline-block"
+              className="inline-block min-h-16 max-w-2xl"
               src={installer?.metadata?.logo_url}
               alt={installer?.metadata?.name}
             />
@@ -33,7 +33,9 @@ export default async function Installer({ params, searchParams }) {
         </div>
 
         <div className="text-center">
-          <h1 className="text-2xl font-semibold mb-2">{app.name}</h1>
+          <h1 className="text-2xl font-semibold mb-2">
+            {app.display_name || app.name}
+          </h1>
           <p>{app?.description}</p>
         </div>
       </header>

@@ -16,6 +16,9 @@ export default {
         "card-text-color": colors.white,
         "card-border-color": colors.black,
         "card-background": "rgb(255 255 255 / 5%)",
+        "card-text-color-dark": colors.white,
+        "card-border-color-dark": colors.white,
+        "card-background-dark": colors.black,
         "accordion-header-color": colors.black,
         "accordion-header-background": primary["500"],
         "accordion-header-active-color": colors.black,
@@ -32,10 +35,11 @@ export default {
         "button-bg-active": primary["700"],
       },
       boxShadow: {
-        "card-shadow":
-          "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-        "button-shadow":
-          "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+        // card shadow classes are applied not applied by default. only on landing page cards.
+        "card-shadow": "4px 4px 0 0 black, 0 1px 2px -1px black",
+        "card-shadow-dark": "4px 4px 0 0 white, 0 1px 2px -1px white",
+        "button-shadow": "3px 3px 0 0 black, 0 1px 2px -1px black",
+        "button-shadow-dark": "3px 3px 0 0 white, 0 1px 2px -1px white",
       },
       borderWidth: {
         "card-border-width": "1px",
